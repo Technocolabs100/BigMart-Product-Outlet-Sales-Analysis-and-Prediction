@@ -1,0 +1,159 @@
+!pip install pandas numpy seaborn matplotlib klib dtale scikit-learn joblib pandas-profiling xgboost
+import pandas as pd
+import numpy as np
+%matplotlib inline     
+#magic function in IPython  In[101]
+import matplotlib.pyplot as plt     # is a collection of command style functions that make matplotlib work like MATLAB
+import seaborn as sns
+df_train= pd.read_csv('Train.csv')
+df_test= pd.read_csv('Test.csv')
+df_train.head()  # displays the first five rows of the dataframe by default
+#df_test.head()
+df_train.shape  # a tuple of array dimensions that tells the number of rows and columns of a given DataFrame
+df_train.isnull().sum()  #seeing the number of null values in the dataset
+df_test.isnull().sum()
+df_train.info()   #seeing the detailed info of the dataset and its types of target variables
+df_train.describe()  # to generate descriptive statistics that summarize the central tendency, dispersion and
+                     # shape of a dataset's distribution, excluding NaN values.
+## Item_Weight is numerical column so we fill it with Mean Imputation
+df_train['Item_Weight'].describe()  #seeing all the central tendenies of the dataset
+df_train['Item_Weight'].fillna(df_train['Item_Weight'].mean(),inplace=True)  #replacing null values with mean values
+df_test['Item_Weight'].fillna(df_train['Item_Weight'].mean(),inplace=True)
+df_train.isnull().sum()  #no null values in item weight
+df_train['Item_Weight'].describe()
+## Outlet_Size is catagorical column so we fill it with Mode Imputation
+df_train['Outlet_Size']  #it is a categorical value 
+df_train['Outlet_Size'].value_counts()
+df_train['Outlet_Size'].mode()
+df_train['Outlet_Size'].fillna(df_train['Outlet_Size'].mode()[0],inplace=True)
+df_test['Outlet_Size'].fillna(df_test['Outlet_Size'].mode()[0],inplace=True)
+## pandas treats the mode as something special since they can be unimodal , bimodal or multimodal distributions they 
+## had to make sure that 1 value could be returned   "Always return series even if only one value is returned"
+df_train.isnull().sum()  #no null value :)
+df_test.isnull().sum()
+# Dimesnsionality reduction of item identifier and outlet identifier
+df_train.drop(['Item_Identifier','Outlet_Identifier'],axis=1,inplace=True)
+df_test.drop(['Item_Identifier','Outlet_Identifier'],axis=1,inplace=True)
+df_train
+df_test
+## EDA (Exploratory data analysis) with Dtale library
+import dtale
+dtale.show(df_train)
+## EDA using Pandas profiling
+pip install ipywidgets
+from pandas_profiling import ProfileReport
+profile = ProfileReport(df_train, title ="Pandas Profiling Report")
+profile
+plt.figure(figsize=(10,5))
+sns.heatmap(df_train.corr(),annot=True)
+plt.show()
+## EDA using Klib library
+import klib
+# klib.describe - functions for visualizing datasets
+klib.cat_plot(df_train) # returns a visualization of the number and frequency of categorical features
+klib.dist_plot(df_train) # returns a distribution plot for every numeric feature
+klib.missingval_plot(df_train) # returns a figure containing information about missing values
+## Data cleaning Klib 
+# klib.clean - functions for cleaning datasets
+klib.data_cleaning(df_train) # performs datacleaning (drop duplicates & empty rows/cols, adjust dtypes,...)
+klib.clean_column_names(df_train) # cleans and standardizes column names, also called inside data_cleaning()
+df_train.info()
+df_train=klib.convert_datatypes(df_train) # converts existing to more efficient dtypes, also called inside data_cleaning()
+df_train.info()
+klib.mv_col_handling(df_train)
+## Preprocessing Task before Model Building
+## 1) Label encoding
+from sklearn.preprocessing import LabelEncoder
+le=LabelEncoder()
+df_train['item_fat_content']= le.fit_transform(df_train['item_fat_content'])
+df_train['item_type']= le.fit_transform(df_train['item_type'])
+df_train['outlet_size']= le.fit_transform(df_train['outlet_size'])
+df_train['outlet_location_type']= le.fit_transform(df_train['outlet_location_type'])
+df_train['outlet_type']= le.fit_transform(df_train['outlet_type'])
+df_train.head(5)
+## 2) Splitting our data into train and test files
+X=df_train.drop('item_outlet_sales',axis=1)
+Y=df_train['item_outlet_sales']
+from sklearn.model_selection import train_test_split
+
+X_train, X_test, Y_train, Y_test = train_test_split(X,Y, random_state=101, test_size=0.2)
+## 3)Standarization
+X.describe()
+from sklearn.preprocessing import StandardScaler
+sc= StandardScaler()
+X_train_std= sc.fit_transform(X_train)  # learning how the data is in X train and then transforming
+X_test_std= sc.transform(X_test)
+X_train_std
+X_test_std
+Y_train
+Y_test
+import joblib 
+# Model building 
+X_test.head()
+from sklearn.metrics import r2_score, mean_absolute_error, mean_squared_error
+## Linear Regression 
+from sklearn.linear_model import LinearRegression
+lr= LinearRegression()
+lr.fit(X_train_std,Y_train)
+Y_pred_lr=lr.predict(X_test_std)
+r2_score(Y_test,Y_pred_lr)
+print(r2_score(Y_test,Y_pred_lr))
+print(mean_absolute_error(Y_test,Y_pred_lr))
+print(np.sqrt(mean_squared_error(Y_test,Y_pred_lr)))
+
+
+
+## Random Forest Regressor
+from sklearn.ensemble import RandomForestRegressor
+rf= RandomForestRegressor()
+rf.fit(X_train_std,Y_train)
+Y_pred_rf= rf.predict(X_test_std)
+r2_score(Y_test,Y_pred_rf)
+print(r2_score(Y_test,Y_pred_rf))
+print(mean_absolute_error(Y_test,Y_pred_rf))
+print(np.sqrt(mean_squared_error(Y_test,Y_pred_rf)))
+
+
+
+## XG Boost Regressor
+from xgboost import XGBRegressor
+xg= XGBRegressor()
+xg.fit(X_train_std, Y_train)
+Y_pred_xg= xg.predict(X_test_std)
+r2_score(Y_test,Y_pred_xg)
+print(r2_score(Y_test,Y_pred_xg))
+print(mean_absolute_error(Y_test,Y_pred_xg))
+print(np.sqrt(mean_squared_error(Y_test,Y_pred_xg)))
+## Hyper parameter tuning
+from sklearn.model_selection import RepeatedStratifiedKFold
+from sklearn.model_selection import GridSearchCV
+
+# define models and parameters
+model = RandomForestRegressor()
+n_estimators = [10, 100, 1000]
+max_depth=range(1,31)
+min_samples_leaf=np.linspace(0.1, 1.0)
+max_features=["auto", "sqrt", "log2"]
+min_samples_split=np.linspace(0.1, 1.0, 10)
+
+# define grid search
+grid = dict(n_estimators=n_estimators)
+
+
+grid_search_forest = GridSearchCV(estimator=model, param_grid=grid, n_jobs=-1, 
+                           scoring='r2',error_score=0,verbose=2,cv=2)
+
+grid_search_forest.fit(X_train_std, Y_train)
+
+# summarize results
+print(f"Best: {grid_search_forest.best_score_:.3f} using {grid_search_forest.best_params_}")
+means = grid_search_forest.cv_results_['mean_test_score']
+stds = grid_search_forest.cv_results_['std_test_score']
+params = grid_search_forest.cv_results_['params']
+
+for mean, stdev, param in zip(means, stds, params):
+    print(f"{mean:.3f} ({stdev:.3f}) with: {param}")
+grid_search_forest.best_params_
+grid_search_forest.best_score_
+Y_pred_rf_grid=grid_search_forest.predict(X_test_std)
+r2_score(Y_test,Y_pred_rf_grid)
