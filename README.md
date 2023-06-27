@@ -1,2 +1,6 @@
 # BigMart Product Outlet Sales Analysis and Prediction
-The aim of this data science project is to build a predictive model and find out the sales of each product at a particular store.
+The aim of this data science project is to develop a robust predictive model capable of accurately estimating the sales figures for each product at a specific store. To achieve this, the project will encompass the following key steps:
+
+## Introduction
+
+
